@@ -7,17 +7,6 @@ const table = document.getElementById('fingering-table');
 const generateBtn = document.getElementById('generate');
 const printBtn = document.getElementById('print');
 
-const defaultFingerings = {
-  D4: 'XXXXXX',
-  E4: 'XXXXXO',
-  'F#4': 'XXXXOO',
-  G4: 'XXXOOO',
-  A4: 'XXOOOO',
-  B4: 'XOOOOO',
-  'C#5': 'OOOOOO',
-  D5: 'OOOOOO',
-};
-
 const scaleSteps = {
   C: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
   D: ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
@@ -26,6 +15,94 @@ const scaleSteps = {
   F: ['F', 'G', 'A', 'Bb', 'C', 'D', 'E'],
   Bb: ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A'],
   Eb: ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'D'],
+};
+
+const simplePatterns = ['XXXXXX', 'XXXXXO', 'XXXXOO', 'XXXOOO', 'XXOOOO', 'XOOOOO', 'OOOOOO'];
+
+function buildSimpleDefaults(key) {
+  const steps = scaleSteps[key];
+  const mapping = {};
+  [4, 5].forEach((octave) => {
+    steps.forEach((note, index) => {
+      mapping[`${note}${octave}`] = simplePatterns[index];
+    });
+  });
+  mapping[`${steps[0]}6`] = simplePatterns[0];
+  return mapping;
+}
+
+const defaultFingeringsByKey = {
+  D: {
+    D4: 'XXXXXX',
+    'D#4': 'XXXXXH',
+    E4: 'XXXXXO',
+    F4: 'XXXXHO',
+    'F#4': 'XXXXOO',
+    G4: 'XXXOOO',
+    'G#4': ['XXHOOO', 'XXOXXX'],
+    A4: 'XXOOOO',
+    'A#4': ['XHOOOO', 'XOXXXX'],
+    B4: 'XOOOOO',
+    'Bb4': ['OXXOOO', 'HOOOOO'],
+    'C#5': ['OOOOOO', 'OOOXXX'],
+    D5: ['HXXXXX', 'XXXXXX', 'OXXXXX'],
+    'D#5': 'XXXXXH',
+    E5: 'XXXXXO',
+    F5: 'XXXXHO',
+    'F#5': 'XXXXOO',
+    G5: 'XXXOOO',
+    'G#5': ['XXHOOO', 'XXOXOO'],
+    A5: 'XXOOOO',
+    'A#5': ['XHOOOO', 'XOXOOO'],
+    B5: 'XOOOOO',
+    'Bb5': ['OXOOOO', 'HOOOOO'],
+    'C#6': ['OOOOOO', 'OOOXXX'],
+    D6: ['OXXOOO', 'OXXXXX'],
+    E6: 'XXOOXX',
+    'F#6': 'XOXXXX',
+    G6: 'XOXOOX',
+    A6: 'OXXXXO',
+  },
+  C: buildSimpleDefaults('C'),
+  G: buildSimpleDefaults('G'),
+  A: buildSimpleDefaults('A'),
+  F: buildSimpleDefaults('F'),
+  Bb: buildSimpleDefaults('Bb'),
+  Eb: buildSimpleDefaults('Eb'),
+};
+
+const numberLabelsByKey = {
+  D: {
+    D4: '1',
+    'D#4': '1#',
+    E4: '2',
+    F4: '3b',
+    'F#4': '3',
+    G4: '4',
+    'G#4': '4#',
+    A4: '5',
+    'A#4': '5#',
+    B4: '6',
+    'Bb4': '7b',
+    'C#5': '7',
+    D5: "1'",
+    'D#5': "1#'",
+    E5: "2'",
+    F5: "3b'",
+    'F#5': "3'",
+    G5: "4'",
+    'G#5': "4#'",
+    A5: "5'",
+    'A#5': "5#'",
+    B5: "6'",
+    'Bb5': "7b'",
+    'C#6': "7'",
+    D6: "1''",
+    E6: "2''",
+    'F#6': "3''",
+    G6: "4''",
+    A6: "5''",
+  },
 };
 
 const storage = {
@@ -45,9 +122,27 @@ const storage = {
   },
 };
 
-const stored = JSON.parse(storage.get('fingerings') || '{}');
-const fingerings = { ...defaultFingerings, ...stored };
 const activeVariants = {};
+let fingerings = {};
+
+function cloneDefaults(key) {
+  const defaults = defaultFingeringsByKey[key] || {};
+  return JSON.parse(JSON.stringify(defaults));
+}
+
+function loadFingeringsForKey(key) {
+  const storedRaw = storage.get(`fingerings-${key}`);
+  let stored = JSON.parse(storedRaw || '{}');
+  if (!storedRaw) {
+    const legacyRaw = storage.get('fingerings');
+    if (legacyRaw) {
+      stored = JSON.parse(legacyRaw || '{}');
+      storage.set(`fingerings-${key}`, JSON.stringify(stored));
+    }
+  }
+  fingerings = { ...cloneDefaults(key), ...stored };
+  Object.keys(activeVariants).forEach((k) => delete activeVariants[k]);
+}
 
 function normalizeVariants(value) {
   if (Array.isArray(value)) {
@@ -70,6 +165,8 @@ function formatNoteLabel(note) {
 }
 
 function formatNumberLabel(note) {
+  const overrides = numberLabelsByKey[keySelect.value];
+  if (overrides && overrides[note]) return overrides[note];
   const match = note.match(/^([A-G])([#b]?)(\d)$/);
   if (!match) return note;
   const letter = match[1];
@@ -142,14 +239,12 @@ function renderHoleRow(pattern, onChange, isVertical = false) {
 
 function renderTable() {
   table.innerHTML = '';
-  Object.keys(fingerings)
-    .sort()
-    .forEach((note) => {
+  Object.keys(fingerings).forEach((note) => {
       const item = document.createElement('div');
       item.className = 'table-item';
 
       const label = document.createElement('strong');
-      label.textContent = formatNoteLabel(note);
+      label.textContent = formatLabel(note);
       const header = document.createElement('div');
       header.className = 'table-header';
 
@@ -163,7 +258,7 @@ function renderTable() {
         const next = getVariants(note);
         next.push('OOOOOO');
         fingerings[note] = next;
-        storage.set('fingerings', JSON.stringify(fingerings));
+        storage.set(`fingerings-${keySelect.value}`, JSON.stringify(fingerings));
         renderTable();
         generate();
       });
@@ -183,7 +278,7 @@ function renderTable() {
           const next = getVariants(note);
           next[idx] = normalizePattern(updated);
           fingerings[note] = next;
-          storage.set('fingerings', JSON.stringify(fingerings));
+          storage.set(`fingerings-${keySelect.value}`, JSON.stringify(fingerings));
           renderTable();
           generate();
         }, true);
@@ -197,7 +292,7 @@ function renderTable() {
         remove.addEventListener('click', () => {
           const next = getVariants(note).filter((_, i) => i !== idx);
           fingerings[note] = next.length ? next : ['OOOOOO'];
-          storage.set('fingerings', JSON.stringify(fingerings));
+          storage.set(`fingerings-${keySelect.value}`, JSON.stringify(fingerings));
           renderTable();
           generate();
         });
@@ -254,8 +349,9 @@ function parseInput(text) {
         let note = scale[degree];
         let octave = octaveBase;
 
-        if (marks.includes('.')) octave -= 1;
-        if (marks.includes("'")) octave += 1;
+        const down = (marks.match(/\./g) || []).length;
+        const up = (marks.match(/'/g) || []).length;
+        octave += up - down;
 
         if (accidental === '#') {
           note = `${note}#`;
@@ -363,6 +459,10 @@ function renderOutput(items) {
 }
 
 function generate() {
+  if (!Object.keys(fingerings).length) {
+    loadFingeringsForKey(keySelect.value);
+    renderTable();
+  }
   const items = parseInput(input.value);
   renderOutput(items.length ? items : []);
 }
@@ -374,11 +474,19 @@ function seedDefaults() {
 }
 
 generateBtn.addEventListener('click', generate);
-keySelect.addEventListener('change', generate);
+keySelect.addEventListener('change', () => {
+  loadFingeringsForKey(keySelect.value);
+  renderTable();
+  generate();
+});
 octaveSelect.addEventListener('change', generate);
-labelModeSelect.addEventListener('change', generate);
+labelModeSelect.addEventListener('change', () => {
+  renderTable();
+  generate();
+});
 printBtn.addEventListener('click', () => window.print());
 
 seedDefaults();
+loadFingeringsForKey(keySelect.value);
 renderTable();
 generate();
