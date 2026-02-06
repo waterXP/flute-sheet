@@ -392,6 +392,11 @@ button:hover {
 }
 
 @media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
   body {
     background: #fff;
   }
