@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>哨笛指法生成器</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hero">
+        <div>
+          <p class="kicker">Whistle Fingering</p>
+          <h1>哨笛指法生成器</h1>
+          <p class="sub">输入简谱或字母音名，自动生成哨笛指法，并支持打印。</p>
+        </div>
+        <div class="meta">
+          <div class="meta-card">
+            <span class="meta-label">默认调性</span>
+            <strong>D 大调</strong>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">孔位</span>
+            <strong>六孔</strong>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">输出格式</span>
+            <strong>可打印</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="panel">
+        <div class="panel-row">
+          <label class="field">
+            <span>输入简谱 / 字母音名</span>
+            <textarea id="input" placeholder="示例：1 2 3 4 5 6 7 1'\n示例：D4 E4 F#4 G4 A4 B4 C#5 D5"></textarea>
+          </label>
+          <div class="field options">
+            <label>
+              <span>简谱调性</span>
+              <select id="key">
+                <option value="D" selected>D 大调</option>
+                <option value="C">C 大调</option>
+                <option value="G">G 大调</option>
+                <option value="A">A 大调</option>
+                <option value="F">F 大调</option>
+                <option value="Bb">Bb 大调</option>
+                <option value="Eb">Eb 大调</option>
+              </select>
+            </label>
+            <label>
+              <span>显示八度</span>
+              <select id="octave">
+                <option value="4" selected>中音区 (4)</option>
+                <option value="5">高音区 (5)</option>
+                <option value="3">低音区 (3)</option>
+              </select>
+            </label>
+            <label>
+              <span>显示名称</span>
+              <select id="label-mode">
+                <option value="letter" selected>字母</option>
+                <option value="number">数字</option>
+              </select>
+            </label>
+            <button id="generate" class="primary">生成指法</button>
+            <button id="print">打印</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>指法结果</h2>
+          <div class="legend">
+            <span class="dot filled"></span>闭孔
+            <span class="dot open"></span>开孔
+            <span class="dot half"></span>半孔
+          </div>
+        </div>
+        <div id="output" class="output"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>指法表（可自定义）</h2>
+          <p class="hint">点击孔位切换：闭孔 / 开孔 / 半孔。修改后会立即生效。</p>
+        </div>
+        <div id="fingering-table" class="table"></div>
+      </section>
+
+      <footer class="footer">
+        <p>支持的输入：</p>
+        <ul>
+          <li>简谱：1-7，可用 <code>'</code> 表示高八度，用 <code>.</code> 表示低八度，用 <code>#</code>/<code>b</code> 表示升降。</li>
+          <li>字母音名：如 D4、F#4、Bb3（数字为八度）。</li>
+        </ul>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
