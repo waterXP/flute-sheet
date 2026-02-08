@@ -64,6 +64,10 @@
                 <option value="number">数字</option>
               </select>
             </label>
+            <label>
+              <span>打印缩放</span>
+              <input id="print-zoom" type="range" min="65" max="120" step="1" value="96" />
+            </label>
             <button id="generate" class="primary">生成指法</button>
             <button id="print">打印</button>
           </div>
@@ -72,7 +76,7 @@
 
       <section class="panel">
         <div class="panel-header">
-          <h2>指法结果</h2>
+          <h2 id="song-title" contenteditable="true" data-placeholder="请输入歌曲名称">指法结果</h2>
           <div class="legend">
             <span class="dot filled"></span>闭孔
             <span class="dot open"></span>开孔

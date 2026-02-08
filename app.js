@@ -6,6 +6,8 @@ const output = document.getElementById('output');
 const table = document.getElementById('fingering-table');
 const generateBtn = document.getElementById('generate');
 const printBtn = document.getElementById('print');
+const songTitle = document.getElementById('song-title');
+const printZoom = document.getElementById('print-zoom');
 
 const scaleSteps = {
   C: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
@@ -121,6 +123,32 @@ const storage = {
     }
   },
 };
+
+if (songTitle) {
+  const storedTitle = storage.get('song-title');
+  if (storedTitle !== null) {
+    songTitle.textContent = storedTitle;
+  }
+  songTitle.addEventListener('input', () => {
+    storage.set('song-title', songTitle.textContent.trim());
+  });
+}
+
+if (printZoom) {
+  const storedZoom = storage.get('print-zoom');
+  if (storedZoom) {
+    printZoom.value = storedZoom;
+  }
+  const applyZoom = () => {
+    const zoomValue = Number(printZoom.value) / 100;
+    if (!Number.isNaN(zoomValue) && zoomValue > 0) {
+      document.documentElement.style.setProperty('--print-zoom', zoomValue.toString());
+    }
+    storage.set('print-zoom', printZoom.value);
+  };
+  printZoom.addEventListener('input', applyZoom);
+  applyZoom();
+}
 
 const activeVariants = {};
 let fingerings = {};
@@ -403,7 +431,19 @@ function renderOutput(items) {
   if (current.length) segments.push(current);
   if (!segments.length) segments.push([]);
 
+  const titleText = (songTitle && songTitle.textContent.trim()) || '指法结果';
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'card-wrap title-wrap';
+  const titleCard = document.createElement('div');
+  titleCard.className = 'card title-card';
+  titleCard.textContent = titleText;
+  titleWrap.append(titleCard);
+  output.append(titleWrap);
+
   segments.forEach((segment, segmentIndex) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card-wrap';
+
     const card = document.createElement('div');
     card.className = 'card segment';
 
@@ -454,7 +494,8 @@ function renderOutput(items) {
     });
 
     card.append(sequence);
-    output.append(card);
+    wrapper.append(card);
+    output.append(wrapper);
   });
 }
 

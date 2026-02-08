@@ -7,6 +7,7 @@
   --muted: #7a6d66;
   --panel: #fffdf9;
   --shadow: rgba(35, 31, 32, 0.12);
+  --print-zoom: 1;
   font-family: "Noto Serif SC", "Source Han Serif SC", "STSong", serif;
 }
 
@@ -189,6 +190,13 @@ button:hover {
   align-items: flex-start;
 }
 
+.card-wrap {
+  display: flex;
+}
+
+.title-wrap {
+  display: none;
+}
 .card {
   padding: 12px;
   border-radius: 14px;
@@ -419,9 +427,79 @@ button:hover {
     padding: 0;
   }
 
+  .legend {
+    display: none;
+  }
+
+  .panel-header h2 {
+    display: none;
+  }
+
+  .app {
+    padding: 0;
+    margin: 0;
+  }
+
+  .panel-header {
+    margin-bottom: 2px;
+    gap: 6px;
+  }
+
+  .panel-header h2 {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .legend {
+    font-size: 10px;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+  }
+
+  #output {
+    zoom: var(--print-zoom);
+    transform-origin: top left;
+  }
+
+  .output {
+    column-gap: 10px;
+    row-gap: 0;
+    margin-top: 0;
+    align-items: stretch;
+  }
+
+  .card-wrap {
+    padding-top: 10px;
+    align-self: stretch;
+  }
+
   .card {
     break-inside: avoid;
     box-shadow: none;
+  }
+
+  .title-wrap {
+    display: flex;
+    padding-top: 10px;
+  }
+
+  .title-card {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    padding: 6px 4px;
+    min-width: 24px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
   }
 
   .card.spacer {
