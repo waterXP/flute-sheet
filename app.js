@@ -38,7 +38,7 @@ function buildSimpleDefaults(key) {
 
 const defaultFingeringsByKey = {
   D: {
-    C4: 'XOOXXX',
+    C4: 'OXXOOO',
     D4: 'XXXXXX',
     'D#4': 'XXXXXH',
     E4: 'XXXXXO',
@@ -57,7 +57,7 @@ const defaultFingeringsByKey = {
     F5: 'XXXXHO',
     'F#5': 'XXXXOO',
     G5: 'XXXOOO',
-    'G#5': ['XXHOOO', 'XXOXOO'],
+    'G#5': ['XXHOOO', 'XXOXXO'],
     A5: 'XXOOOO',
     'A#5': ['XHOOOO', 'XOXOOO'],
     B5: 'XOOOOO',
@@ -128,6 +128,14 @@ const storage = {
   },
 };
 
+function sanitizeFileName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120);
+}
+
 if (songTitle) {
   const storedTitle = storage.get('song-title');
   if (storedTitle !== null) {
@@ -155,6 +163,7 @@ if (printZoom) {
 }
 
 const activeVariants = {};
+const selectedPatterns = {};
 let fingerings = {};
 
 function cloneDefaults(key) {
@@ -174,6 +183,7 @@ function loadFingeringsForKey(key) {
   }
   fingerings = { ...cloneDefaults(key), ...stored };
   Object.keys(activeVariants).forEach((k) => delete activeVariants[k]);
+  Object.keys(selectedPatterns).forEach((k) => delete selectedPatterns[k]);
 }
 
 function normalizeVariants(value) {
@@ -206,19 +216,36 @@ function sanitizeFingeringsMap(source) {
   return result;
 }
 
+function sanitizeSelectedPatternsMap(source) {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+
+  const result = {};
+  Object.entries(source).forEach(([instanceKey, pattern]) => {
+    if (typeof instanceKey !== 'string' || typeof pattern !== 'string') {
+      return;
+    }
+    result[instanceKey] = normalizePattern(pattern);
+  });
+  return result;
+}
+
 function buildExportPayload() {
+  const effectiveTitle = songTitle ? songTitle.textContent.trim() : '';
   return {
     type: 'tin-whistle-editor-state',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     state: {
       input: input.value,
-      songTitle: songTitle ? songTitle.textContent.trim() : '',
+      songTitle: effectiveTitle,
       key: keySelect.value,
       octave: octaveSelect.value,
       labelMode: labelModeSelect.value,
       printZoom: printZoom ? printZoom.value : null,
       fingerings: sanitizeFingeringsMap(fingerings),
+      selectedPatterns: sanitizeSelectedPatternsMap(selectedPatterns) || {},
     },
   };
 }
@@ -237,7 +264,8 @@ function downloadTextFile(filename, text) {
 
 function exportFingerings() {
   const payload = buildExportPayload();
-  const filename = `whistle-editor-${payload.state.key}.json`;
+  const baseName = sanitizeFileName(payload.state.songTitle) || '指法结果';
+  const filename = `${baseName}.json`;
   downloadTextFile(filename, JSON.stringify(payload, null, 2));
 }
 
@@ -271,6 +299,7 @@ function applyImportedEditorState(payload) {
   if (!nextFingerings || !Object.keys(nextFingerings).length) {
     throw new Error('导入文件中没有有效的指法数据');
   }
+  const importedSelectedPatterns = sanitizeSelectedPatternsMap(state.selectedPatterns) || {};
 
   storage.set(`fingerings-${nextKey}`, JSON.stringify(nextFingerings));
 
@@ -295,6 +324,9 @@ function applyImportedEditorState(payload) {
   }
 
   loadFingeringsForKey(nextKey);
+  Object.entries(importedSelectedPatterns).forEach(([instanceKey, pattern]) => {
+    selectedPatterns[instanceKey] = pattern;
+  });
   renderTable();
   generate();
 }
@@ -602,8 +634,11 @@ function renderOutput(items) {
       label.textContent = formatLabel(note);
 
       const { patterns, missing } = noteToFingering(note);
-      const index = activeVariants[instanceKey] || 0;
+      const selectedPattern = selectedPatterns[instanceKey];
+      const selectedIndex = selectedPattern ? patterns.indexOf(selectedPattern) : -1;
+      const index = selectedIndex >= 0 ? selectedIndex : (activeVariants[instanceKey] || 0);
       const fingering = patterns[index % patterns.length];
+      selectedPatterns[instanceKey] = fingering;
       if (missing) label.classList.add('missing');
 
       const pattern = document.createElement('div');
@@ -626,7 +661,9 @@ function renderOutput(items) {
         toggle.title = '切换指法';
         toggle.setAttribute('aria-label', '切换指法');
         toggle.addEventListener('click', () => {
-          activeVariants[instanceKey] = (index + 1) % patterns.length;
+          const nextIndex = (index + 1) % patterns.length;
+          activeVariants[instanceKey] = nextIndex;
+          selectedPatterns[instanceKey] = patterns[nextIndex];
           generate();
         });
         column.append(toggle);
