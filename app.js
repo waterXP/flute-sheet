@@ -38,6 +38,7 @@ function buildSimpleDefaults(key) {
 
 const defaultFingeringsByKey = {
   D: {
+    C4: 'XOOXXX',
     D4: 'XXXXXX',
     'D#4': 'XXXXXH',
     E4: 'XXXXXO',
@@ -50,7 +51,7 @@ const defaultFingeringsByKey = {
     B4: 'XOOOOO',
     'Bb4': ['OXXOOO', 'HOOOOO'],
     'C#5': ['OOOOOO', 'OOOXXX'],
-    D5: ['HXXXXX', 'XXXXXX', 'OXXXXX'],
+    D5: ['OXXXXX', 'HXXXXX', 'XXXXXX'],
     'D#5': 'XXXXXH',
     E5: 'XXXXXO',
     F5: 'XXXXHO',
