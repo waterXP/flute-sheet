@@ -6,6 +6,9 @@ const output = document.getElementById('output');
 const table = document.getElementById('fingering-table');
 const generateBtn = document.getElementById('generate');
 const printBtn = document.getElementById('print');
+const exportFingeringsBtn = document.getElementById('export-fingerings');
+const importFingeringsBtn = document.getElementById('import-fingerings');
+const importFileInput = document.getElementById('import-file');
 const songTitle = document.getElementById('song-title');
 const printZoom = document.getElementById('print-zoom');
 
@@ -177,6 +180,144 @@ function normalizeVariants(value) {
     return value.map((item) => normalizePattern(item));
   }
   return [normalizePattern(value)];
+}
+
+function sanitizeFingeringsMap(source) {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    return null;
+  }
+
+  const result = {};
+  Object.entries(source).forEach(([note, value]) => {
+    if (typeof note !== 'string') return;
+    if (Array.isArray(value)) {
+      const variants = value.map((item) => normalizePattern(item)).filter(Boolean);
+      if (variants.length) {
+        result[note] = variants;
+      }
+      return;
+    }
+    if (typeof value === 'string') {
+      result[note] = normalizePattern(value);
+    }
+  });
+
+  return result;
+}
+
+function buildExportPayload() {
+  return {
+    type: 'tin-whistle-editor-state',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    state: {
+      input: input.value,
+      songTitle: songTitle ? songTitle.textContent.trim() : '',
+      key: keySelect.value,
+      octave: octaveSelect.value,
+      labelMode: labelModeSelect.value,
+      printZoom: printZoom ? printZoom.value : null,
+      fingerings: sanitizeFingeringsMap(fingerings),
+    },
+  };
+}
+
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportFingerings() {
+  const payload = buildExportPayload();
+  const filename = `whistle-editor-${payload.state.key}.json`;
+  downloadTextFile(filename, JSON.stringify(payload, null, 2));
+}
+
+function isSelectableValue(select, value) {
+  return value && Array.from(select.options).some((option) => option.value === value);
+}
+
+function applyImportedFingerings(payload) {
+  const hasKeyOption = isSelectableValue(keySelect, payload.key);
+  const nextKey = hasKeyOption ? payload.key : keySelect.value;
+  const nextFingerings = sanitizeFingeringsMap(payload.fingerings || payload);
+  if (!nextFingerings || !Object.keys(nextFingerings).length) {
+    throw new Error('导入文件中没有有效的指法数据');
+  }
+
+  storage.set(`fingerings-${nextKey}`, JSON.stringify(nextFingerings));
+  keySelect.value = nextKey;
+  loadFingeringsForKey(nextKey);
+  renderTable();
+  generate();
+}
+
+function applyImportedEditorState(payload) {
+  const state = payload && typeof payload === 'object' ? payload.state : null;
+  if (!state || typeof state !== 'object') {
+    throw new Error('导入文件缺少编辑状态');
+  }
+
+  const nextKey = isSelectableValue(keySelect, state.key) ? state.key : keySelect.value;
+  const nextFingerings = sanitizeFingeringsMap(state.fingerings);
+  if (!nextFingerings || !Object.keys(nextFingerings).length) {
+    throw new Error('导入文件中没有有效的指法数据');
+  }
+
+  storage.set(`fingerings-${nextKey}`, JSON.stringify(nextFingerings));
+
+  if (typeof state.input === 'string') {
+    input.value = state.input;
+  }
+  if (songTitle && typeof state.songTitle === 'string') {
+    songTitle.textContent = state.songTitle || '指法结果';
+    storage.set('song-title', songTitle.textContent.trim());
+  }
+
+  keySelect.value = nextKey;
+  if (isSelectableValue(octaveSelect, state.octave)) {
+    octaveSelect.value = state.octave;
+  }
+  if (isSelectableValue(labelModeSelect, state.labelMode)) {
+    labelModeSelect.value = state.labelMode;
+  }
+  if (printZoom && state.printZoom !== null && state.printZoom !== undefined) {
+    printZoom.value = String(state.printZoom);
+    printZoom.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  loadFingeringsForKey(nextKey);
+  renderTable();
+  generate();
+}
+
+function importFingerings(file) {
+  const reader = new FileReader();
+  reader.addEventListener('load', () => {
+    try {
+      const payload = JSON.parse(reader.result);
+      if (payload && payload.type === 'tin-whistle-editor-state') {
+        applyImportedEditorState(payload);
+        window.alert(`已导入当前编辑内容（${keySelect.value} 调）`);
+      } else {
+        applyImportedFingerings(payload);
+        window.alert(`已导入 ${keySelect.value} 调指法表`);
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : '导入失败，请检查文件格式');
+    }
+  });
+  reader.addEventListener('error', () => {
+    window.alert('读取导入文件失败');
+  });
+  reader.readAsText(file, 'utf-8');
 }
 
 function formatNoteLabel(note) {
@@ -526,6 +667,15 @@ labelModeSelect.addEventListener('change', () => {
   generate();
 });
 printBtn.addEventListener('click', () => window.print());
+exportFingeringsBtn.addEventListener('click', exportFingerings);
+importFingeringsBtn.addEventListener('click', () => importFileInput.click());
+importFileInput.addEventListener('change', (event) => {
+  const [file] = event.target.files || [];
+  if (file) {
+    importFingerings(file);
+  }
+  event.target.value = '';
+});
 
 seedDefaults();
 loadFingeringsForKey(keySelect.value);

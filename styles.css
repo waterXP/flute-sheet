@@ -118,6 +118,12 @@ textarea {
   gap: 14px;
 }
 
+.import-export {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 select,
 button,
 input {
@@ -395,6 +401,10 @@ button:hover {
   }
 
   .meta {
+    grid-template-columns: 1fr;
+  }
+
+  .import-export {
     grid-template-columns: 1fr;
   }
 }
